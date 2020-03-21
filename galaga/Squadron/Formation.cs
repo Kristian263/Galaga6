@@ -19,7 +19,6 @@ namespace galaga.Squadron
             }
         }
         public void CreateEnemies (List<Image> enemyStrides){
-            System.Console.WriteLine(MaxEnemies);
             float j = ((MaxEnemies)*0.1f);
             for (float i = 0.0f; i <= j; i+=0.2f){
                     Enemies.AddDynamicEntity(new Enemy ((new DynamicShape(new Vec2F(0.2f+i,0.8f),

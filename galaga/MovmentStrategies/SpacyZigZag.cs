@@ -21,5 +21,8 @@ namespace galaga.MovementStrategies{
         public void MoveEnemies(EntityContainer<Enemy> enemies){
             enemies.Iterate(MoveEnemy);
         }
+        public void IncressSpeed(float pct){
+            speed *= pct;
+        }
     }
 }

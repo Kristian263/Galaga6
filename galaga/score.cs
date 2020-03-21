@@ -4,7 +4,7 @@ using DIKUArcade.Math;
 namespace galaga{
 
     public class Score{
-        private int score;
+        public int score {get; private set;}
         private Text display;
 
         public Score(Vec2F position, Vec2F extent){

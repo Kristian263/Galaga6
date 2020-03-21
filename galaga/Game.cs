@@ -32,11 +32,16 @@ namespace galaga
         private Random rnd = new Random();
         private int explosionLength = 500;
         private Score score;
+        private float pct = 1.0f;
+        private GameState gameState;
+        private GameOverDisPlay GameOverDisPlay;
 
         public Game() {
             win = new Window ("Mad man", 500,500);
             gameTimer = new GameTimer(60,60);
             score = new Score(new Vec2F(0.05f,0.8f), new Vec2F (0.2f,0.2f));
+            gameState = GameState.GamePlaying;
+            GameOverDisPlay = new GameOverDisPlay();
 
             player = new Player(
                 new DynamicShape (new Vec2F(0.45f,0.1f), new Vec2F(0.1f,0.1f)),
@@ -72,6 +77,7 @@ namespace galaga
             enemies = formation.Enemies;
         }
         public void NextMovementStrategy(){
+            pct += 0.05f;
             switch (rnd.Next(2)){
                 case 0:
                     currentMoveStrategy = new MovementStrategies.Down();
@@ -80,6 +86,7 @@ namespace galaga
                     currentMoveStrategy = new MovementStrategies.SpacyZigZag();
                     break;
             }
+            currentMoveStrategy.IncressSpeed(pct);
         }
 
         private void UpdateEnemies(){
@@ -116,6 +123,14 @@ namespace galaga
             playerShots.Iterate(IterateForShoots);
         }
 
+        public void ExitGameOver(){
+            void checkExit(Enemy enemy){
+                if(enemy.Shape.Position.Y <= 0.08f){
+                    gameState = GameState.GameOver;
+                }
+            }
+            enemies.Iterate(checkExit);
+        }
         public void AddExplosion(float posX, float posY, float extentX, float extentY) {
             explosions.AddAnimation(
             new StationaryShape(posX, posY, extentX, extentY), explosionLength,
@@ -124,25 +139,36 @@ namespace galaga
         public void GameLoop(){
             while (win.IsRunning()){
                 gameTimer.MeasureTime();
-                while (gameTimer.ShouldUpdate()){
-                    eventBus.ProcessEvents();
-                    win.PollEvents();
-                    UpdateEnemies();
-                    player.Move();
-                    IterateShots();
-                    currentMoveStrategy.MoveEnemies(enemies);
-                }
-                if (gameTimer.ShouldRender()){
-                win.Clear();
-                player.Entity.RenderEntity();
-                enemies.RenderEntities();
-                playerShots.RenderEntities();
-                explosions.RenderAnimations();
-                score.RenderScore();
-                win.SwapBuffers();
+                if (gameState == GameState.GamePlaying){
+                    while (gameTimer.ShouldUpdate()){
+                        eventBus.ProcessEvents();
+                        win.PollEvents();
+                        UpdateEnemies();
+                        player.Move();
+                        IterateShots();
+                        ExitGameOver();
+                        currentMoveStrategy.MoveEnemies(enemies);
                     }
-                if (gameTimer.ShouldReset()){
-                win.Title = "Galaga | Ups: " + gameTimer.CapturedUpdates + ", FPS: " + gameTimer.CapturedFrames;
+                    if (gameTimer.ShouldRender()){
+                    win.Clear();
+                    player.Entity.RenderEntity();
+                    enemies.RenderEntities();
+                    playerShots.RenderEntities();
+                    explosions.RenderAnimations();
+                    score.RenderScore();
+                    win.SwapBuffers();
+                        }
+                    if (gameTimer.ShouldReset()){
+                    win.Title = "Galaga | Ups: " + gameTimer.CapturedUpdates + ", FPS: " + gameTimer.CapturedFrames;
+                        }
+                } else {
+                        win.Clear();
+                        GameOverDisPlay.RenderGameOverDisPlay(score.score);
+                        win.SwapBuffers();
+                        while (gameTimer.ShouldUpdate()) {
+                            eventBus.ProcessEvents();
+                            win.PollEvents();
+                        }
                     }
                 }
             }
@@ -154,7 +180,6 @@ namespace galaga
                         GameEventType.WindowEvent, this, "CLOSE_WINDOW", "", ""));
                         break;
                 case "KEY_LEFT":
-                    //player.Direction(new Vec2F (-0.01f,0.0f));
                     eventBus.RegisterEvent(
                         GameEventFactory<object>.CreateGameEventForSpecificProcessor(
                             GameEventType.PlayerEvent, this, player, "MOVE_LEFT", "", ""));
