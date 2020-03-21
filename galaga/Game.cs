@@ -22,9 +22,9 @@ namespace galaga
 
         private List<Image> enemyStrides;
 
-        private List<Enemy> enemies;
+        private EntityContainer<Enemy> enemies;
 
-        public List<PlayerShot> playerShots {get; private set;}
+        public EntityContainer<PlayerShot> playerShots {get; private set;}
 
         private List<Image> explosionStrides;
         private AnimationContainer explosions;
@@ -44,9 +44,9 @@ namespace galaga
             enemyStrides = ImageStride.CreateStrides (4, System.IO.Path.Combine("Assets", "Images",
                 "BlueMonster.png"));
 
-            enemies = new List<Enemy>();
+            enemies = new EntityContainer<Enemy>();
 
-            playerShots = new List<PlayerShot>();
+            playerShots = new EntityContainer<PlayerShot>();
 
             explosionStrides = ImageStride.CreateStrides(8, System.IO.Path.Combine("Assets", "Images", "Explosion.png"));
             explosions = new AnimationContainer(8);
@@ -62,57 +62,41 @@ namespace galaga
             eventBus.Subscribe(GameEventType.WindowEvent, this);
             eventBus.Subscribe(GameEventType.PlayerEvent, player);
 
-            AddEnemies();
+            AddEnemies(new Squadron.Formation(8));
 
             }
 
-        public void AddEnemies(){
-            for (float i = 0.0f; i < 0.8f; i += 0.1f){
-                enemies.Add(new Enemy((new DynamicShape (new Vec2F(0.1f+i,0.8f),
-                    new Vec2F(0.1f,0.1f))),
-                new ImageStride(80, enemyStrides)));
-            }
-        }
-        public void DrawEnemies(){
-            foreach (Enemy enemy in enemies){
-                enemy.RenderEntity();
-            }
+        public void AddEnemies(Squadron.ISquadron formation){
+            formation.CreateEnemies(enemyStrides);
+
+            enemies = formation.Enemies;
         }
         public void IterateShots(){
-            foreach (var shot in playerShots){
+            void IterateForShoots (PlayerShot shot){
                 shot.Shape.Move();
-                if (shot.Shape.Position.Y > 1.0f){
-                    shot.DeleteEntity();
+                if (shot.Shape.Position.Y > 1.0f){shot.DeleteEntity();
                 } else {
-                    foreach (var enemy in enemies){
+                    void Collision (Enemy enemy){
                         if (CollisionDetection.Aabb(shot.Shape.AsDynamicShape(), enemy.Shape).Collision){
                             shot.DeleteEntity();
                             enemy.DeleteEntity();
-                            AddExplosion(enemy.Shape.Position.X,enemy.Shape.Position.Y,
-                            enemy.Shape.Extent.X,enemy.Shape.Extent.Y);
+                            AddExplosion(enemy.Shape.Position.X,enemy.Shape.Position.Y, 
+                                enemy.Shape.Extent.X,enemy.Shape.Extent.Y);
                             score.AddPoint();
+                                }
                             }
-                        }
+                    enemies.Iterate(Collision);
                     }
                 }
-                List <Enemy> newEnemies = new List<Enemy>();
-                foreach (Enemy enemy in enemies){
-                    if (!enemy.IsDeleted()){newEnemies.Add(enemy);}
-                }
-                enemies = newEnemies;
+            playerShots.Iterate(IterateForShoots);
             }
+            
 
         public void AddExplosion(float posX, float posY, float extentX, float extentY) {
             explosions.AddAnimation(
             new StationaryShape(posX, posY, extentX, extentY), explosionLength,
             new ImageStride(explosionLength / 8, explosionStrides));
             }
-        public void DrawShots(){
-            foreach (PlayerShot shoot in playerShots){
-                if (!shoot.IsDeleted()) {shoot.RenderEntity();
-                }
-            }
-        }
         public void GameLoop(){
             while (win.IsRunning()){
                 gameTimer.MeasureTime();
@@ -125,8 +109,8 @@ namespace galaga
                 if (gameTimer.ShouldRender()){
                 win.Clear();
                 player.Entity.RenderEntity();
-                DrawEnemies();
-                DrawShots();
+                enemies.RenderEntities();
+                playerShots.RenderEntities();
                 explosions.RenderAnimations();
                 score.RenderScore();
                 win.SwapBuffers();

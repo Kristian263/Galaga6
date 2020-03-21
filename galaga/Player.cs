@@ -28,7 +28,7 @@ namespace galaga
         }
 
         public void Shoot(){
-            game.playerShots.Add(new PlayerShot (((new DynamicShape(
+            game.playerShots.AddDynamicEntity(new PlayerShot (((new DynamicShape(
                 new Vec2F (Entity.Shape.Position.X +.045f, Entity.Shape.Position.Y +0.1f),
                 //Ellers bare entity.Shape.Position pga. så lægge en vektor til
                 new Vec2F(0.008f,0.027f)))), projectileImage));
