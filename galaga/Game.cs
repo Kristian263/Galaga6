@@ -46,7 +46,7 @@ namespace galaga
                 "BlueMonster.png"));
 
             enemies = new EntityContainer<Enemy>();
-            AddEnemies(new Squadron.Formation(8));
+            AddEnemies(new Squadron.Formation(6));
             currentMoveStrategy = new MovementStrategies.NoMove();
 
             playerShots = new EntityContainer<PlayerShot>();
@@ -81,20 +81,20 @@ namespace galaga
                     break;
             }
         }
-        public void UpdateEnemies(){
+
+        private void UpdateEnemies(){
             if (enemies.CountEntities() <= 0){
-                switch(rnd.Next(2)){
+                switch (rnd.Next(2)){
                     case 0:
-                        AddEnemies(new Squadron.Formation(rnd.Next(4,9)));
+                        AddEnemies(new Squadron.Formation(rnd.Next(4,7)));
                         break;
                     default:
                         AddEnemies(new Squadron.Vformation(rnd.Next(4,9)));
                         break;
-                    }
+                }
             NextMovementStrategy();
             }
         }
-
         public void IterateShots(){
             void IterateForShoots (PlayerShot shot){
                 shot.Shape.Move();
@@ -114,7 +114,7 @@ namespace galaga
                     }
                 }
             playerShots.Iterate(IterateForShoots);
-            }
+        }
 
         public void AddExplosion(float posX, float posY, float extentX, float extentY) {
             explosions.AddAnimation(
