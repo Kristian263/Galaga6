@@ -27,8 +27,9 @@ namespace galaga
         public EntityContainer<PlayerShot> playerShots {get; private set;}
 
         private List<Image> explosionStrides;
+        private MovementStrategies.IMovementStrategy currentMoveStrategy;
         private AnimationContainer explosions;
-
+        private Random rnd = new Random();
         private int explosionLength = 500;
         private Score score;
 
@@ -45,6 +46,8 @@ namespace galaga
                 "BlueMonster.png"));
 
             enemies = new EntityContainer<Enemy>();
+            AddEnemies(new Squadron.Formation(8));
+            currentMoveStrategy = new MovementStrategies.NoMove();
 
             playerShots = new EntityContainer<PlayerShot>();
 
@@ -62,25 +65,47 @@ namespace galaga
             eventBus.Subscribe(GameEventType.WindowEvent, this);
             eventBus.Subscribe(GameEventType.PlayerEvent, player);
 
-            AddEnemies(new Squadron.Formation(8));
-
             }
 
         public void AddEnemies(Squadron.ISquadron formation){
             formation.CreateEnemies(enemyStrides);
-
             enemies = formation.Enemies;
         }
+        public void NextMovementStrategy(){
+            switch (rnd.Next(2)){
+                case 0:
+                    currentMoveStrategy = new MovementStrategies.Down();
+                    break;
+                default:
+                    currentMoveStrategy = new MovementStrategies.SpacyZigZag();
+                    break;
+            }
+        }
+        public void UpdateEnemies(){
+            if (enemies.CountEntities() <= 0){
+                switch(rnd.Next(2)){
+                    case 0:
+                        AddEnemies(new Squadron.Formation(rnd.Next(4,9)));
+                        break;
+                    default:
+                        AddEnemies(new Squadron.Vformation(rnd.Next(4,9)));
+                        break;
+                    }
+            NextMovementStrategy();
+            }
+        }
+
         public void IterateShots(){
             void IterateForShoots (PlayerShot shot){
                 shot.Shape.Move();
-                if (shot.Shape.Position.Y > 1.0f){shot.DeleteEntity();
+                if (shot.Shape.Position.Y > 1.0f){
+                    shot.DeleteEntity();
                 } else {
                     void Collision (Enemy enemy){
                         if (CollisionDetection.Aabb(shot.Shape.AsDynamicShape(), enemy.Shape).Collision){
                             shot.DeleteEntity();
                             enemy.DeleteEntity();
-                            AddExplosion(enemy.Shape.Position.X,enemy.Shape.Position.Y, 
+                            AddExplosion(enemy.Shape.Position.X,enemy.Shape.Position.Y,
                                 enemy.Shape.Extent.X,enemy.Shape.Extent.Y);
                             score.AddPoint();
                                 }
@@ -90,7 +115,6 @@ namespace galaga
                 }
             playerShots.Iterate(IterateForShoots);
             }
-            
 
         public void AddExplosion(float posX, float posY, float extentX, float extentY) {
             explosions.AddAnimation(
@@ -103,9 +127,11 @@ namespace galaga
                 while (gameTimer.ShouldUpdate()){
                     eventBus.ProcessEvents();
                     win.PollEvents();
+                    UpdateEnemies();
                     player.Move();
                     IterateShots();
-                    }
+                    currentMoveStrategy.MoveEnemies(enemies);
+                }
                 if (gameTimer.ShouldRender()){
                 win.Clear();
                 player.Entity.RenderEntity();
